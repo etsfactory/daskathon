@@ -1,4 +1,4 @@
-from distributed.utils_test import gen_cluster, loop, slowinc
+#from distributed.utils_test import gen_cluster, loop, slowinc
 
 from time import time, sleep
 
@@ -14,39 +14,45 @@ for app in cg.list_apps():
     cg.delete_app(app.id, force=True)
 
 
-def test_simple(loop):
-    thread = Thread(target=loop.start); thread.daemon = True
-    thread.start()
-    s = Scheduler(loop=loop)
-    s.start(0)
+def test_multiple_workers():
+    with MarathonCluster(nworkers=2, marathon='http://localhost:8080') as mc:
+        while len(mc.scheduler.workers) < 2:
+            sleep(0.1)
 
-    with MarathonCluster(s, cpus=1, mem=1000) as mc:
-        mc.scale_up(1)
-        while len(s.workers) < 1:
-            sleep(0.01)
-
-        mc.scale_down(s.workers)
-        while s.workers:
-            sleep(0.01)
-
-
-def test_adapt(loop):
-    thread = Thread(target=loop.start); thread.daemon = True
-    thread.start()
-    s = Scheduler(loop=loop)
-    s.start(0)
-
-    with MarathonCluster(s, cpus=1, mem=1000) as mc:
-        ac = Adaptive(s, mc)
-        with Client(s.address, loop=loop) as c:
-            assert not s.ncores
+        with Client(mc.scheduler_address) as c:
             x = c.submit(lambda x: x + 1, 1)
-            x.result()
-            assert len(s.ncores) == 1
+            assert x.result() == 2
+
+
+def test_manual_scaling():
+    with MarathonCluster(marathon='http://localhost:8080') as mc:
+        assert not mc.scheduler.ncores
+
+        mc.scale_up(1)
+        while len(mc.scheduler.workers) < 1:
+            sleep(0.1)
+
+        with Client(mc.scheduler_address) as c:
+            x = c.submit(lambda x: x + 1, 1)
+            assert x.result() == 2
+
+        mc.scale_down(mc.scheduler.workers)
+        while mc.scheduler.workers:
+            sleep(0.1)
+
+
+def test_adapting():
+    with MarathonCluster(marathon='http://localhost:8080',
+                         cpus=1, mem=512, adaptive=True) as mc:
+        with Client(mc.scheduler_address) as c:
+            assert not mc.scheduler.ncores
+            x = c.submit(lambda x: x + 1, 1)
+            assert x.result() == 2
+            assert len(mc.scheduler.ncores) == 1
 
             del x
 
-            start = time()
-            while s.ncores:
-                sleep(0.01)
-                assert time() < start + 5
+        start = time()
+        while mc.scheduler.ncores:
+            sleep(0.01)
+            assert time() < start + 5
