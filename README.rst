@@ -1,5 +1,5 @@
-Dask-Marathon
-==========
+Daskathon
+=========
 
 |Build Status|
 
