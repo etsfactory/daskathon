@@ -1,10 +1,8 @@
-#from distributed.utils_test import gen_cluster, loop, slowinc
-
 from time import time, sleep
 
 from distributed import Client, Scheduler
 from distributed.deploy import Adaptive
-from dask_marathon import MarathonCluster
+from daskathon import MarathonCluster
 from threading import Thread
 
 from marathon import MarathonClient

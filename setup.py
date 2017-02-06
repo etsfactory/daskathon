@@ -3,15 +3,15 @@
 from os.path import exists
 from setuptools import setup
 
-setup(name='dask_marathon',
-      version='0.0.1',
+setup(name='daskathon',
+      version='0.1.0',
       description='Deploy Dask on Marathon',
-      url='http://github.com/mrocklin/dask-marathon/',
-      maintainer='Matthew Rocklin',
-      maintainer_email='mrocklin@gmail.com',
+      url='http://github.com/daskos/daskathon/',
+      maintainer='Krisztian Szucs',
+      maintainer_email='szucs.krisztian@gmail.com',
       license='BSD',
       keywords='',
-      packages=['dask_marathon'],
+      packages=['daskathon'],
       tests_require=['pytest'],
       setup_requires=['pytest-runner'],
       install_requires=['distributed', 'marathon==0.8.9'],
