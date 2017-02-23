@@ -36,7 +36,7 @@ before_install:
   - docker images
 
 install:
-  - conda install distributed
+  - conda install distributed=1.15.1
 
 script:
   - which python
