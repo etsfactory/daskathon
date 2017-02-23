@@ -4,6 +4,5 @@ RUN conda install -y nomkl distributed dask bokeh partd s3fs hdfs3 fastparquet \
  && conda clean -y -a
 
 ADD . /daskathon
-
 RUN pip install -e /daskathon
 
