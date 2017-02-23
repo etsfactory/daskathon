@@ -13,8 +13,12 @@ setup(name='daskathon',
       keywords='',
       packages=['daskathon'],
       tests_require=['pytest'],
-      setup_requires=['pytest-runner'],
+      setup_requires=['pytest-runner', 'click'],
       install_requires=['distributed', 'marathon==0.8.9'],
       long_description=(open('README.rst').read() if exists('README.rst')
                         else ''),
+      entry_points='''
+          [console_scripts]
+          daskathon=daskathon.cli:daskathon
+      ''',
       zip_safe=False)
