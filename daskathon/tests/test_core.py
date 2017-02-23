@@ -1,3 +1,4 @@
+import pytest
 from time import time, sleep
 
 from distributed import Client, Scheduler
@@ -12,14 +13,15 @@ for app in cg.list_apps():
     cg.delete_app(app.id, force=True)
 
 
-# def test_multiple_workers():
-#     with MarathonCluster(nworkers=2, marathon='http://localhost:8080') as mc:
-#         while len(mc.scheduler.workers) < 2:
-#             sleep(0.1)
+@pytest.mark.skip
+def test_multiple_workers():
+    with MarathonCluster(nworkers=2, marathon='http://localhost:8080') as mc:
+        while len(mc.scheduler.workers) < 2:
+            sleep(0.1)
 
-#         with Client(mc.scheduler_address) as c:
-#             x = c.submit(lambda x: x + 1, 1)
-#             assert x.result() == 2
+        with Client(mc.scheduler_address) as c:
+            x = c.submit(lambda x: x + 1, 1)
+            assert x.result() == 2
 
 
 def test_manual_scaling():
