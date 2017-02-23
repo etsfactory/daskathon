@@ -53,12 +53,12 @@ def run(marathon, name, worker_cpus, worker_mem, ip, port, bokeh_port, nworkers,
         limit = max(soft, hard // 2)
         resource.setrlimit(resource.RLIMIT_NOFILE, (limit, hard))
 
-    # with MarathonCluster(diagnostics_port=bokeh_port, scheduler_port=port,
-    #                      nworkers=nworkers, nprocs=nprocs, nthreads=nthreads,
-    #                      marathon=marathon, docker=docker, adaptive=adaptive,
-    #                      name=name, cpus=worker_cpus, mem=worker_mem) as mc:
-    #     while True:
-    #         sleep(10)
+    with MarathonCluster(diagnostics_port=bokeh_port, scheduler_port=port,
+                         nworkers=nworkers, nprocs=nprocs, nthreads=nthreads,
+                         marathon=marathon, docker=docker, adaptive=adaptive,
+                         name=name, cpus=worker_cpus, mem=worker_mem) as mc:
+        while True:
+            sleep(10)
 
 
 @daskathon.command()
@@ -104,9 +104,8 @@ def deploy(marathon, name, docker, scheduler_cpus, scheduler_mem, adaptive,
     container = MarathonContainer({'image': docker})
     args = ['daskathon', 'run'] + args + [marathon]
 
-    print(args)
     app = MarathonApp(instances=1, container=container,
                       cpus=scheduler_cpus, mem=scheduler_mem,
                       #port_definitions=ports,
                       args=args)
-    #client.create_app('{}-scheduler'.format(name), app)
+    client.create_app('{}-scheduler'.format(name), app)

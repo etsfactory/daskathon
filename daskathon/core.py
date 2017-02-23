@@ -26,7 +26,7 @@ class MarathonWorkers(object):
         self.scheduler = scheduler
         self.executor = ThreadPoolExecutor(1)
         self.client = MarathonClient(marathon)
-        self.name = name or 'daskathon-workers-%s' % uuid.uuid4()
+        self.name = name or 'dask-%s' % uuid.uuid4()
         self.docker = docker
         self.nprocs = nprocs
         self.nthreads = nthreads
