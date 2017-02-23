@@ -33,7 +33,8 @@ class MarathonWorkers(object):
         self.options = kwargs
 
     def start(self, nworkers=0):
-        args = ['dask-worker', self.scheduler.address,
+        address = self.scheduler.address.replace('tcp://', '')
+        args = ['dask-worker', address,
                 '--name', '$MESOS_TASK_ID',  # use Mesos task ID as worker name
                 '--worker-port', '$PORT_WORKER',
                 '--bokeh-port', '$PORT_BOKEH',

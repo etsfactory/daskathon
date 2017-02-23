@@ -13,7 +13,6 @@ for app in cg.list_apps():
     cg.delete_app(app.id, force=True)
 
 
-@pytest.mark.skip
 def test_multiple_workers():
     with MarathonCluster(nworkers=2, marathon='http://localhost:8080') as mc:
         while len(mc.scheduler.workers) < 2:
