@@ -15,7 +15,8 @@ from tornado.ioloop import IOLoop
 from threading import Thread
 from distributed.utils import sync
 
-logger = logging.getLogger(__file__)
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
 
 
 class MarathonWorkers(object):
@@ -48,19 +49,31 @@ class MarathonWorkers(object):
                   'name': name}
                  for name in ['worker', 'nanny', 'http', 'bokeh']]
 
+        # healths = [{'portIndex': i,
+        #             'protocol': 'TCP',
+        #             'gracePeriodSeconds': 300,
+        #             'intervalSeconds': 60,
+        #             'timeoutSeconds': 20,
+        #             'maxConsecutiveFailures': 3}
+        #            for i, name in enumerate(['worker', 'nanny', 'http', 'bokeh'])]
+        healths = []
+        
         if 'mem' in self.options:
             args.extend(['--memory-limit',
-                         str(int(self.options['mem'] * 0.6 * 1e6))])
+                         str(int(self.options['mem'] * 0.8 * 1e6))])
 
         container = MarathonContainer({'image': self.docker})
         command = ' '.join(args)
 
         app = MarathonApp(instances=nworkers, container=container,
                           port_definitions=ports, cmd=command,
+                          health_checks=healths,
                           **self.options)
         self.app = self.client.create_app(self.name, app)
+        logger.info('Started marathon workers {}'.format(self.app.id))
 
     def close(self):
+        logger.info('Stopping marathon workers {}'.format(self.app.id))
         self.client.delete_app(self.app.id, force=True)
         del self.app
 
@@ -106,12 +119,11 @@ class MarathonCluster(object):
         self.diagnostics_port = diagnostics_port
         self.diagnostics = None
 
-        self.scheduler.start(0) #(ip, self.scheduler_port))
+        self.scheduler.start(self.scheduler_port)
         self.workers.start(nworkers)
         self.status = 'running'
         if self.diagnostics_port is not None:
-            self._start_diagnostics(self.diagnostics_port)
-                                    #silence=self.silence_logs)
+            self._start_diagnostics(self.diagnostics_port, silence=silence_logs)
 
     def _start_diagnostics(self, port=8787, show=False, silence=logging.CRITICAL):
         try:
@@ -147,12 +159,15 @@ class MarathonCluster(object):
 
     @gen.coroutine
     def _close(self):
+        logging.info('Stopping workers...')
         self.workers.close()
  
         with ignoring(gen.TimeoutError, StreamClosedError, OSError):
+            logging.info('Stopping scheduler...')
             yield self.scheduler.close(fast=True)
 
         if self.diagnostics:
+            logging.info('Stopping diagnostics...')
             self.diagnostics.close()
 
     def close(self):

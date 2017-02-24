@@ -1,10 +1,12 @@
 from __future__ import print_function, division, absolute_import
 
 import atexit
+import uuid
 import json
 import logging
 import os
 import socket
+import signal
 import subprocess
 import sys
 from time import sleep
@@ -16,6 +18,9 @@ from marathon import MarathonClient, MarathonApp
 from marathon.models.container import MarathonContainer
 
 from .core import MarathonCluster
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 
 @click.group()
@@ -45,25 +50,44 @@ def daskathon():
               help="Worker's docker image")
 @click.option('--adaptive', is_flag=True,
               help="Adaptive deployment of workers")
+@click.option('--constraint', '-c', type=str, default='', 
+              help="Marathon constrain in form `field:operator:value`")
 def run(marathon, name, worker_cpus, worker_mem, ip, port, bokeh_port, nworkers, nprocs,
-        nthreads, docker, adaptive):
+        nthreads, docker, adaptive, constraint):
     if sys.platform.startswith('linux'):
         import resource   # module fails importing on Windows
         soft, hard = resource.getrlimit(resource.RLIMIT_NOFILE)
         limit = max(soft, hard // 2)
         resource.setrlimit(resource.RLIMIT_NOFILE, (limit, hard))
 
-    with MarathonCluster(diagnostics_port=bokeh_port, scheduler_port=port,
+    if constraint:
+        constraints = [constraint.split(':')[:3]]
+    else:
+        constraints = []
+
+    mc = MarathonCluster(diagnostics_port=bokeh_port, scheduler_port=port,
                          nworkers=nworkers, nprocs=nprocs, nthreads=nthreads,
                          marathon=marathon, docker=docker, adaptive=adaptive,
-                         name=name, cpus=worker_cpus, mem=worker_mem) as mc:
-        while True:
-            sleep(10)
+                         name=name, cpus=worker_cpus, mem=worker_mem,
+                         constraints=constraints,
+                         silence_logs=logging.INFO)
+
+    def handle_signal(sig, frame):
+        logger.info('Received signal, shutdown...')
+        mc.close()
+
+    signal.signal(signal.SIGINT, handle_signal)
+    signal.signal(signal.SIGTERM, handle_signal)
+
+    while mc.scheduler.status == 'running':
+        sleep(10)
+
+    sys.exit(0)
 
 
 @daskathon.command()
 @click.argument('marathon', type=str)
-@click.option('--name', type=str, default='daskathon',
+@click.option('--name', '-n', type=str, default='',
               help="Application name")
 @click.option('--worker-cpus', type=int, default=1,
               help="Cpus allocated for each worker")
@@ -85,14 +109,19 @@ def run(marathon, name, worker_cpus, worker_mem, ip, port, bokeh_port, nworkers,
               help="Number of threads inside a process")
 @click.option('--docker', type=str, default='kszucs/daskathon',
               help="Worker's docker image")
-@click.option('--adaptive', is_flag=True,
+@click.option('--adaptive', '-a', is_flag=True,
               help="Adaptive deployment of workers")
+@click.option('--constraint', '-c', type=str, default='', 
+              help="Marathon constrain in form `field:operator:value`")
 def deploy(marathon, name, docker, scheduler_cpus, scheduler_mem, adaptive,
-           **kwargs):
-    name = name or 'daskathon-{}'.format(uuid.uuid4()[-4:])
+           port, bokeh_port, constraint, **kwargs):
+    name = name or 'daskathon-{}'.format(str(uuid.uuid4())[-4:])
 
     kwargs['name'] = '{}-workers'.format(name)
     kwargs['docker'] = docker
+    kwargs['port'] = '$PORT_SCHEDULER'
+    kwargs['bokeh_port'] = '$PORT_BOKEH'
+    kwargs['constraint'] = constraint
 
     args = [('--{}'.format(k.replace('_', '-')), str(v)) for k, v in kwargs.items()
             if v not in (None, '')]
@@ -103,9 +132,32 @@ def deploy(marathon, name, docker, scheduler_cpus, scheduler_mem, adaptive,
     client = MarathonClient(marathon)
     container = MarathonContainer({'image': docker})
     args = ['daskathon', 'run'] + args + [marathon]
+    cmd = ' '.join(args)
+
+    # healths = [{'portIndex': i,
+    #             'protocol': 'TCP',
+    #             'gracePeriodSeconds': 300,
+    #             'intervalSeconds': 30,
+    #             'timeoutSeconds': 20,
+    #             'maxConsecutiveFailures': 3}
+    #            for i, name in enumerate(['scheduler', 'bokeh', 'http'])]
+    healths = []
+    ports = [{'port': 0,
+              'protocol': 'tcp',
+              'name': name}
+              for name in ['scheduler', 'bokeh', 'http']]
+
+    if constraint:
+        constraints = [constraint.split(':')[:3]]
+    else:
+        constraints = []
 
     app = MarathonApp(instances=1, container=container,
                       cpus=scheduler_cpus, mem=scheduler_mem,
-                      #port_definitions=ports,
-                      args=args)
+                      task_kill_grace_period_seconds=20,
+                      port_definitions=ports,
+                      health_checks=healths,
+                      constraints=constraints,
+                      cmd=cmd)
     client.create_app('{}-scheduler'.format(name), app)
+
