@@ -57,7 +57,7 @@ class MarathonWorkers(object):
         #             'maxConsecutiveFailures': 3}
         #            for i, name in enumerate(['worker', 'nanny', 'http', 'bokeh'])]
         healths = []
-        
+
         if 'mem' in self.options:
             args.extend(['--memory-limit',
                          str(int(self.options['mem'] * 0.8 * 1e6))])
