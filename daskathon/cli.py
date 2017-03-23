@@ -123,8 +123,8 @@ def deploy(marathon, name, docker, scheduler_cpus, scheduler_mem, adaptive,
     kwargs['port'] = '$PORT_SCHEDULER'
     kwargs['bokeh_port'] = '$PORT_BOKEH'
 
-    args = [('--{}'.format(k.replace('_', '-')), str(v)) for k, v in kwargs.items()
-            if v not in (None, '')]
+    args = [('--{}'.format(k.replace('_', '-')), str(v))
+            for k, v in kwargs.items() if v not in (None, '')]
 
     for c in constraint:
         args.append(('--constraint', c))
@@ -136,7 +136,8 @@ def deploy(marathon, name, docker, scheduler_cpus, scheduler_mem, adaptive,
         args.append('--adaptive')
 
     client = MarathonClient(marathon)
-    container = MarathonContainer({'image': docker})
+    container = MarathonContainer({'image': docker,
+                                   'forcePullImage': True})
     args = ['daskathon', 'run'] + args + [marathon]
     cmd = ' '.join(args)
 

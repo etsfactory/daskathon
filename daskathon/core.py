@@ -62,7 +62,8 @@ class MarathonWorkers(object):
             args.extend(['--memory-limit',
                          str(int(self.options['mem'] * 0.8 * 1e6))])
 
-        container = MarathonContainer({'image': self.docker})
+        container = MarathonContainer({'image': self.docker,
+                                       'forcePullImage': True})
         command = ' '.join(args)
 
         app = MarathonApp(instances=nworkers, container=container,
