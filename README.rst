@@ -43,8 +43,8 @@ up and down as neccessary in response to current workload.
 TODO
 ----
 
--  Deploy the scheduler on the cluster
--  Support a command line interface
+- [x] Deploy the scheduler on the cluster
+- [x] Support a command line interface
 
 
 Docker Testing Harness
