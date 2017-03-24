@@ -140,7 +140,7 @@ class MarathonCluster(object):
                 self.scheduler, io_loop=self.scheduler.loop)
             self.scheduler.services['http'].listen(0)
         self.diagnostics = BokehWebInterface(
-            tcp_port=self.scheduler.port,
+            scheduler_address=self.scheduler_address,
             http_port=self.scheduler.services['http'].port,
             bokeh_port=port, show=show,
             log_level=logging.getLevelName(silence).lower())
