@@ -4,7 +4,7 @@ from os.path import exists
 from setuptools import setup
 
 setup(name='daskathon',
-      version='0.1.0',
+      version='1.0',
       description='Deploy Dask on Marathon',
       url='http://github.com/daskos/daskathon/',
       maintainer='Krisztian Szucs',
