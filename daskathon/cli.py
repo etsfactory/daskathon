@@ -46,7 +46,7 @@ def daskathon():
               help="Number of processing inside a worker")
 @click.option('--nthreads', type=int, default=0,
               help="Number of threads inside a process")
-@click.option('--docker', type=str, default='kszucs/distributed',
+@click.option('--docker', type=str, default='daskos/distributed',
               help="Worker's docker image")
 @click.option('--adaptive', is_flag=True,
               help="Adaptive deployment of workers")

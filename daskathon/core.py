@@ -11,6 +11,7 @@ from marathon.models.container import MarathonContainer
 from tornado.iostream import StreamClosedError
 from distributed.utils import sync, ignoring
 from distributed.deploy import Adaptive
+from distributed.cli.utils import uri_from_host_port
 from tornado import gen
 from tornado.ioloop import IOLoop
 from threading import Thread
@@ -22,7 +23,7 @@ logger.setLevel(logging.INFO)
 class MarathonWorkers(object):
 
     def __init__(self, scheduler, marathon, name=None, nprocs=1, nthreads=0,
-                 docker='kszucs/distributed',
+                 docker='daskos/distributed',
                  **kwargs):
         self.scheduler = scheduler
         self.executor = ThreadPoolExecutor(1)
@@ -127,7 +128,8 @@ class MarathonCluster(object):
             self.adaptive = Adaptive(self.scheduler, self.workers)
 
         self.scheduler_port = scheduler_port
-        self.scheduler.start(self.scheduler_port)
+        addr = uri_from_host_port(ip, scheduler_port, 8786)
+        self.scheduler.start(addr)
         self.workers.start(nworkers)
         self.status = 'running'
 
