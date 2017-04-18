@@ -36,7 +36,8 @@ before_install:
   - docker images
 
 install:
-  - conda install distributed
+  - conda install -y dask
+  - pip install git+https://github.com/dask/distributed
 
 script:
   - which python

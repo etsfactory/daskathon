@@ -1,19 +1,19 @@
 from __future__ import print_function, division, absolute_import
 
 from concurrent.futures import ThreadPoolExecutor
+from time import sleep
 import logging
 import uuid
-from distributed import Client, Scheduler
+from distributed import Scheduler
 from marathon import MarathonClient, MarathonApp
 from marathon.models.container import MarathonContainer
 
 from tornado.iostream import StreamClosedError
-from distributed.utils import sync, ignoring, All
+from distributed.utils import sync, ignoring
 from distributed.deploy import Adaptive
 from tornado import gen
 from tornado.ioloop import IOLoop
 from threading import Thread
-from distributed.utils import sync
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -93,7 +93,7 @@ class MarathonCluster(object):
 
     def __init__(self, loop=None, nworkers=0, ip='127.0.0.1',
                  scheduler_port=8786, diagnostics_port=8787,
-                 services = {}, adaptive=False, silence_logs=logging.CRITICAL,
+                 services={}, adaptive=False, silence_logs=logging.CRITICAL,
                  **kwargs):
         if silence_logs:
             for l in ['distributed.scheduler',
@@ -110,6 +110,16 @@ class MarathonCluster(object):
             while not self.loop._running:
                 sleep(0.001)
 
+        if diagnostics_port is not None:
+            try:
+                from distributed.bokeh.scheduler import BokehScheduler
+            except ImportError:
+                logger.info('To start diagnostics web server '
+                            'please install Bokeh')
+                return
+            else:
+                services[('bokeh', diagnostics_port)] = BokehScheduler
+
         self.scheduler = Scheduler(loop=self.loop, services=services)
         self.workers = MarathonWorkers(self.scheduler, **kwargs)
 
@@ -117,33 +127,9 @@ class MarathonCluster(object):
             self.adaptive = Adaptive(self.scheduler, self.workers)
 
         self.scheduler_port = scheduler_port
-        self.diagnostics_port = diagnostics_port
-        self.diagnostics = None
-
         self.scheduler.start(self.scheduler_port)
         self.workers.start(nworkers)
         self.status = 'running'
-        if self.diagnostics_port is not None:
-            self._start_diagnostics(self.diagnostics_port, silence=silence_logs)
-
-    def _start_diagnostics(self, port=8787, show=False, silence=logging.CRITICAL):
-        try:
-            from distributed.bokeh.application import BokehWebInterface
-        except ImportError:
-            logger.info("To start diagnostics web server please install Bokeh")
-            return
-        from distributed.http.scheduler import HTTPScheduler
-
-        assert self.diagnostics is None
-        if 'http' not in self.scheduler.services:
-            self.scheduler.services['http'] = HTTPScheduler(
-                self.scheduler, io_loop=self.scheduler.loop)
-            self.scheduler.services['http'].listen(0)
-        self.diagnostics = BokehWebInterface(
-            scheduler_address=self.scheduler_address,
-            http_port=self.scheduler.services['http'].port,
-            bokeh_port=port, show=show,
-            log_level=logging.getLevelName(silence).lower())
 
     def scale_up(self, nworkers):
         self.workers.scale_up(nworkers)
@@ -162,14 +148,10 @@ class MarathonCluster(object):
     def _close(self):
         logging.info('Stopping workers...')
         self.workers.close()
- 
+
         with ignoring(gen.TimeoutError, StreamClosedError, OSError):
             logging.info('Stopping scheduler...')
             yield self.scheduler.close(fast=True)
-
-        if self.diagnostics:
-            logging.info('Stopping diagnostics...')
-            self.diagnostics.close()
 
     def close(self):
         """ Close the cluster """

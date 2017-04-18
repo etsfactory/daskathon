@@ -1,14 +1,12 @@
-import pytest
 from time import time, sleep
 
-from distributed import Client, Scheduler
-from distributed.deploy import Adaptive
+from distributed import Client
 from daskathon import MarathonCluster
-from threading import Thread
 
 from marathon import MarathonClient
-cg = MarathonClient('http://localhost:8080')
 
+
+cg = MarathonClient('http://localhost:8080')
 for app in cg.list_apps():
     cg.delete_app(app.id, force=True)
 

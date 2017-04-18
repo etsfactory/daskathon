@@ -14,7 +14,7 @@ setup(name='daskathon',
       packages=['daskathon'],
       tests_require=['pytest'],
       setup_requires=['pytest-runner'],
-      install_requires=['distributed', 'marathon==0.8.9', 'click'],
+      install_requires=['distributed', 'marathon', 'click'],
       long_description=(open('README.rst').read() if exists('README.rst')
                         else ''),
       entry_points='''
