@@ -106,7 +106,7 @@ def run(marathon, name, worker_cpus, worker_mem, ip, port, bokeh_port, nworkers,
               help="Number of processing inside a worker")
 @click.option('--nthreads', type=int, default=0,
               help="Number of threads inside a process")
-@click.option('--docker', type=str, default='kszucs/daskathon',
+@click.option('--docker', type=str, default='daskos/daskathon',
               help="Worker's docker image")
 @click.option('--adaptive', '-a', is_flag=True,
               help="Adaptive deployment of workers")

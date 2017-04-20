@@ -22,9 +22,8 @@ logger.setLevel(logging.INFO)
 
 class MarathonWorkers(object):
 
-    def __init__(self, scheduler, marathon, name=None, nprocs=1, nthreads=0,
-                 docker='daskos/distributed',
-                 **kwargs):
+    def __init__(self, scheduler, marathon, name=None, nprocs=1,
+                 nthreads=0, docker='daskos/distributed', **kwargs):
         self.scheduler = scheduler
         self.executor = ThreadPoolExecutor(1)
         self.client = MarathonClient(marathon)
@@ -35,8 +34,8 @@ class MarathonWorkers(object):
         self.options = kwargs
 
     def start(self, nworkers=0):
-        address = self.scheduler.address.replace('tcp://', '')
-        args = ['dask-worker', address,
+        # address = self.scheduler.address.replace('tcp://', '')
+        args = ['dask-worker', self.scheduler.address,
                 '--name', '$MESOS_TASK_ID',  # use Mesos task ID as worker name
                 '--worker-port', '$PORT_WORKER',
                 '--bokeh-port', '$PORT_BOKEH',
@@ -92,7 +91,7 @@ class MarathonWorkers(object):
 
 class MarathonCluster(object):
 
-    def __init__(self, loop=None, nworkers=0, ip='127.0.0.1',
+    def __init__(self, loop=None, nworkers=0, 
                  scheduler_port=8786, diagnostics_port=8787,
                  services={}, adaptive=False, silence_logs=logging.CRITICAL,
                  **kwargs):
@@ -128,10 +127,11 @@ class MarathonCluster(object):
             self.adaptive = Adaptive(self.scheduler, self.workers)
 
         self.scheduler_port = scheduler_port
-        addr = uri_from_host_port(ip, scheduler_port, 8786)
-        self.scheduler.start(addr)
+        self.scheduler.start(scheduler_port)
         self.workers.start(nworkers)
         self.status = 'running'
+
+        logging.info('Scheduler address: {}'.format(self.scheduler.address))
 
     def scale_up(self, nworkers):
         self.workers.scale_up(nworkers)
