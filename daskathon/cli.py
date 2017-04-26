@@ -169,8 +169,8 @@ def deploy(marathon, name, docker, scheduler_cpus, scheduler_mem, adaptive,
     client.create_app('{}-scheduler'.format(name), scheduler)
 
     if jupyter:
-        cmd = ('jupyter notebook --allow-root --no-browser --token \'\' '
-               '--ip 0.0.0.0 --port $PORT_NOTEBOOK')
+        cmd = ('jupyter notebook --allow-root --no-browser '
+               '--NotebookApp.token=\'\' --ip 0.0.0.0 --port $PORT_NOTEBOOK')
         ports = [{'port': 0, 'protocol': 'tcp', 'name': 'notebook'}]
         jupyter = deepcopy(scheduler)
         jupyter.cmd = cmd
