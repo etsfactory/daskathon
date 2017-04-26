@@ -1,18 +1,20 @@
 from __future__ import print_function, division, absolute_import
 
-import atexit
+import os
+import sys
 import uuid
 import json
-import logging
-import os
+import click
 import socket
 import signal
+import atexit
+import logging
 import subprocess
-import sys
-from time import sleep
-
-import click
 import distributed
+
+from time import sleep
+from copy import deepcopy
+
 from toolz import concat
 from marathon import MarathonClient, MarathonApp
 from marathon.models.container import MarathonContainer
@@ -54,8 +56,8 @@ def daskathon():
               help="Marathon constrain in form `field:operator:value`")
 @click.option('--uri', type=str, multiple=True,
               help="Mesos uri")
-def run(marathon, name, worker_cpus, worker_mem, ip, port, bokeh_port, nworkers, nprocs,
-        nthreads, docker, adaptive, constraint, uri):
+def run(marathon, name, worker_cpus, worker_mem, ip, port, bokeh_port,
+        nworkers, nprocs, nthreads, docker, adaptive, constraint, uri):
     if sys.platform.startswith('linux'):
         import resource   # module fails importing on Windows
         soft, hard = resource.getrlimit(resource.RLIMIT_NOFILE)
@@ -114,8 +116,10 @@ def run(marathon, name, worker_cpus, worker_mem, ip, port, bokeh_port, nworkers,
               help="Marathon constraint in form `field:operator:value`")
 @click.option('--uri', type=str, multiple=True,
               help="Mesos uri")
+@click.option('--jupyter', '-j', is_flag=True,
+              help="Start a jupyter notebook client on the cluster")
 def deploy(marathon, name, docker, scheduler_cpus, scheduler_mem, adaptive,
-           port, bokeh_port, constraint, uri, **kwargs):
+           port, bokeh_port, constraint, uri, jupyter, **kwargs):
     name = name or 'daskathon-{}'.format(str(uuid.uuid4())[-4:])
 
     kwargs['name'] = '{}-workers'.format(name)
@@ -149,20 +153,24 @@ def deploy(marathon, name, docker, scheduler_cpus, scheduler_mem, adaptive,
     #             'maxConsecutiveFailures': 3}
     #            for i, name in enumerate(['scheduler', 'bokeh', 'http'])]
     healths = []
-    ports = [{'port': 0,
-              'protocol': 'tcp',
-              'name': name}
-              for name in ['scheduler', 'bokeh', 'http']]
+    ports = [{'port': 0, 'protocol': 'tcp', 'name': service}
+             for service in ['scheduler', 'bokeh', 'http']]
 
     constraints = [c.split(':')[:3] for c in constraint]
 
-    app = MarathonApp(instances=1, container=container,
-                      cpus=scheduler_cpus, mem=scheduler_mem,
-                      task_kill_grace_period_seconds=20,
-                      port_definitions=ports,
-                      health_checks=healths,
-                      constraints=constraints,
-                      uris=uri,
-                      cmd=cmd)
-    client.create_app('{}-scheduler'.format(name), app)
+    scheduler = MarathonApp(instances=1, container=container,
+                            cpus=scheduler_cpus, mem=scheduler_mem,
+                            task_kill_grace_period_seconds=20,
+                            port_definitions=ports,
+                            health_checks=healths,
+                            constraints=constraints,
+                            uris=uri,
+                            cmd=cmd)
+    client.create_app('{}-scheduler'.format(name), scheduler)
 
+    if jupyter:
+        ports = [{'port': 0, 'protocol': 'tcp', 'name': 'notebook'}]
+        jupyter = deepcopy(scheduler)
+        jupyter.cmd = 'jupyter notebook --ip 0.0.0.0 --port $PORT_NOTEBOOK'
+        jupyter.port_definitions = ports
+        client.create_app('{}-jupyter'.format(name), jupyter)
