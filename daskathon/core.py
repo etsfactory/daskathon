@@ -153,7 +153,7 @@ class MarathonCluster(object):
 
         with ignoring(gen.TimeoutError, StreamClosedError, OSError):
             logging.info('Stopping scheduler...')
-            yield self.scheduler.close(fast=True)
+            yield self.scheduler.close()
 
         self.status = 'closed'
 
