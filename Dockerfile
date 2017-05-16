@@ -1,16 +1,10 @@
-FROM kszucs/miniconda3
+FROM kszucs/miniconda3:debian
 
-RUN apk --no-cache add bash \
- && conda update --all -y \
- && conda install -y nomkl dask bokeh partd s3fs \
-                     fastparquet pandas libgcc cytoolz \
+RUN conda install -y nomkl dask bokeh partd s3fs \
+                     fastparquet pandas cytoolz distributed \
  && conda clean -y -a \
- && apk del bash
 
 ADD . /daskathon
 
-RUN apk --no-cache add git \
- && pip install --no-cache-dir git+https://github.com/dask/distributed \
- && pip install -e /daskathon \
- && apk del git
+RUN pip install --no-cache-dir /daskathon
 

@@ -6,7 +6,7 @@ services:
     image: zookeeper:3.4.9
  
   mesos-master:
-    image: mesosphere/mesos-master:1.1.0-2.0.107.ubuntu1404
+    image: mesosphere/mesos-master:1.2.0
     network_mode: host
     entrypoint:
       - mesos-master
@@ -22,7 +22,7 @@ services:
       - MESOS_ZK=zk://127.0.0.1:2181/mesos
 
   mesos-slave:
-    image: mesosphere/mesos-slave:1.1.0-2.0.107.ubuntu1404
+    image: mesosphere/mesos-slave:1.2.0
     entrypoint:
       - mesos-slave
     network_mode: host
