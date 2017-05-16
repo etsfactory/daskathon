@@ -13,7 +13,7 @@ for app in cg.list_apps():
 
 def test_multiple_workers():
     with MarathonCluster(nworkers=2, marathon='http://localhost:8080',
-                         scheduler_port=8090) as mc:
+                         scheduler_port=9001, diagnostics_port=9101) as mc:
         while len(mc.scheduler.workers) < 2:
             sleep(0.1)
 
@@ -24,7 +24,7 @@ def test_multiple_workers():
 
 def test_manual_scaling():
     with MarathonCluster(marathon='http://localhost:8080',
-                         scheduler_port=8091) as mc:
+                         scheduler_port=9002, diagnostics_port=9102) as mc:
         assert not mc.scheduler.ncores
 
         mc.scale_up(1)
@@ -43,7 +43,7 @@ def test_manual_scaling():
 def test_adapting():
     with MarathonCluster(marathon='http://localhost:8080',
                          cpus=1, mem=512, adaptive=True,
-                         scheduler_port=8092) as mc:
+                         scheduler_port=9003, diagnostics_port=9103) as mc:
         with Client(mc.scheduler_address) as c:
             assert not mc.scheduler.ncores
             x = c.submit(lambda x: x + 1, 1)
