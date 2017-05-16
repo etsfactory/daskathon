@@ -1,19 +1,20 @@
 from __future__ import print_function, division, absolute_import
 
-from concurrent.futures import ThreadPoolExecutor
-from time import sleep
 import logging
 import uuid
-from distributed import Scheduler
-from marathon import MarathonClient, MarathonApp
-from marathon.models.container import MarathonContainer
 
-from tornado.iostream import StreamClosedError
-from distributed.utils import sync, ignoring
-from distributed.deploy import Adaptive
+from time import sleep
 from tornado import gen
 from tornado.ioloop import IOLoop
 from threading import Thread
+from marathon import MarathonClient, MarathonApp
+from marathon.models.container import MarathonContainer
+from concurrent.futures import ThreadPoolExecutor
+
+from distributed import Scheduler
+from distributed.utils import sync, ignoring
+from distributed.deploy import Adaptive
+from distributed.core import CommClosedError
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -90,9 +91,9 @@ class MarathonWorkers(object):
 
 class MarathonCluster(object):
 
-    def __init__(self, loop=None, nworkers=0,
-                 scheduler_port=8786, diagnostics_port=8787,
-                 services={}, adaptive=False, silence_logs=logging.CRITICAL,
+    def __init__(self, loop=None, nworkers=0, ip=None, scheduler_port=0,
+                 diagnostics_port=8787, services={}, adaptive=False,
+                 silence_logs=logging.CRITICAL,
                  **kwargs):
         if silence_logs:
             for l in ['distributed.scheduler',
@@ -118,13 +119,14 @@ class MarathonCluster(object):
                 services[('bokeh', diagnostics_port)] = BokehScheduler
 
         self.scheduler = Scheduler(loop=self.loop, services=services)
-        self.scheduler_port = scheduler_port
-
         self.workers = MarathonWorkers(self.scheduler, **kwargs)
         if adaptive:
             self.adaptive = Adaptive(self.scheduler, self.workers)
 
-        self.scheduler.start(scheduler_port)
+        if ip is None:
+            ip = '127.0.0.1'
+        self.scheduler_port = scheduler_port
+        self.scheduler.start((ip, scheduler_port))
         self.workers.start(nworkers)
         self.status = 'running'
 
@@ -151,9 +153,9 @@ class MarathonCluster(object):
         logging.info('Stopping workers...')
         self.workers.close()
 
-        with ignoring(gen.TimeoutError, StreamClosedError, OSError):
+        with ignoring(gen.TimeoutError, CommClosedError, OSError):
             logging.info('Stopping scheduler...')
-            yield self.scheduler.close()
+            yield self.scheduler.close(fast=True)
 
         self.status = 'closed'
 
