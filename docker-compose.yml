@@ -4,7 +4,7 @@ services:
   zookeeper:
     network_mode: host
     image: zookeeper:3.4.9
- 
+
   mesos-master:
     image: mesosphere/mesos-master:1.2.0
     network_mode: host
