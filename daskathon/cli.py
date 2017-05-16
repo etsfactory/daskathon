@@ -1,16 +1,10 @@
 from __future__ import print_function, division, absolute_import
 
-import os
 import sys
 import uuid
-import json
 import click
-import socket
 import signal
-import atexit
 import logging
-import subprocess
-import distributed
 
 from time import sleep
 from copy import deepcopy
@@ -33,29 +27,29 @@ def daskathon():
 @daskathon.command()
 @click.argument('marathon', type=str)
 @click.option('--name', type=str, default='daskathon-workers',
-              help="Application name")
+              help='Application name')
 @click.option('--worker-cpus', type=int, default=1,
-              help="Cpus allocated for each worker")
+              help='Cpus allocated for each worker')
 @click.option('--worker-mem', type=int, default=512,
-              help="Memory of workers instances in MiB")
+              help='Memory of workers instances in MiB')
 @click.option('--ip', type=str, default='',
-              help="IP, hostname or URI of this server")
-@click.option('--port', type=int, default=None, help="Serving port")
-@click.option('--bokeh-port', type=int, default=8787, help="Bokeh port")
+              help='IP, hostname or URI of this server')
+@click.option('--port', type=int, default=None, help='Serving port')
+@click.option('--bokeh-port', type=int, default=8787, help='Bokeh port')
 @click.option('--nworkers', type=int, default=0,
-              help="Number of worker instances")
+              help='Number of worker instances')
 @click.option('--nprocs', type=int, default=1,
-              help="Number of processing inside a worker")
+              help='Number of processing inside a worker')
 @click.option('--nthreads', type=int, default=0,
-              help="Number of threads inside a process")
-@click.option('--docker', type=str, default='daskos/distributed',
+              help='Number of threads inside a process')
+@click.option('--docker', type=str, default='daskos/daskathon',
               help="Worker's docker image")
 @click.option('--adaptive', is_flag=True,
-              help="Adaptive deployment of workers")
+              help='Adaptive deployment of workers')
 @click.option('--constraint', '-c', type=str, default='', multiple=True,
-              help="Marathon constrain in form `field:operator:value`")
+              help='Marathon constrain in form `field:operator:value`')
 @click.option('--uri', type=str, multiple=True,
-              help="Mesos uri")
+              help='Mesos uri')
 def run(marathon, name, worker_cpus, worker_mem, ip, port, bokeh_port,
         nworkers, nprocs, nthreads, docker, adaptive, constraint, uri):
     if sys.platform.startswith('linux'):
@@ -89,35 +83,35 @@ def run(marathon, name, worker_cpus, worker_mem, ip, port, bokeh_port,
 @daskathon.command()
 @click.argument('marathon', type=str)
 @click.option('--name', '-n', type=str, default='',
-              help="Application name")
+              help='Application name')
 @click.option('--worker-cpus', type=int, default=1,
-              help="Cpus allocated for each worker")
+              help='Cpus allocated for each worker')
 @click.option('--worker-mem', type=int, default=512,
-              help="Memory of workers instances in MiB")
+              help='Memory of workers instances in MiB')
 @click.option('--scheduler-cpus', type=int, default=1,
-              help="Cpus allocated for each worker")
+              help='Cpus allocated for each worker')
 @click.option('--scheduler-mem', type=int, default=512,
-              help="Memory of workers instances in MiB")
+              help='Memory of workers instances in MiB')
 @click.option('--ip', type=str, default='',
-              help="IP, hostname or URI of this server")
-@click.option('--port', type=int, default=None, help="Serving port")
-@click.option('--bokeh-port', type=int, default=8787, help="Bokeh port")
+              help='IP, hostname or URI of this server')
+@click.option('--port', type=int, default=None, help='Serving port')
+@click.option('--bokeh-port', type=int, default=8787, help='Bokeh port')
 @click.option('--nworkers', type=int, default=0,
-              help="Number of worker instances")
+              help='Number of worker instances')
 @click.option('--nprocs', type=int, default=1,
-              help="Number of processing inside a worker")
+              help='Number of processing inside a worker')
 @click.option('--nthreads', type=int, default=0,
-              help="Number of threads inside a process")
+              help='Number of threads inside a process')
 @click.option('--docker', type=str, default='daskos/daskathon',
               help="Worker's docker image")
 @click.option('--adaptive', '-a', is_flag=True,
-              help="Adaptive deployment of workers")
+              help='Adaptive deployment of workers')
 @click.option('--constraint', '-c', type=str, multiple=True,
-              help="Marathon constraint in form `field:operator:value`")
+              help='Marathon constraint in form `field:operator:value`')
 @click.option('--uri', type=str, multiple=True,
-              help="Mesos uri")
+              help='Mesos uri')
 @click.option('--jupyter', '-j', is_flag=True,
-              help="Start a jupyter notebook client on the cluster")
+              help='Start a jupyter notebook client on the cluster')
 def deploy(marathon, name, docker, scheduler_cpus, scheduler_mem, adaptive,
            port, bokeh_port, constraint, uri, jupyter, **kwargs):
     name = name or 'daskathon-{}'.format(str(uuid.uuid4())[-4:])

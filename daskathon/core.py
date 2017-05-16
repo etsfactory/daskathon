@@ -11,7 +11,6 @@ from marathon.models.container import MarathonContainer
 from tornado.iostream import StreamClosedError
 from distributed.utils import sync, ignoring
 from distributed.deploy import Adaptive
-from distributed.cli.utils import uri_from_host_port
 from tornado import gen
 from tornado.ioloop import IOLoop
 from threading import Thread
@@ -23,7 +22,7 @@ logger.setLevel(logging.INFO)
 class MarathonWorkers(object):
 
     def __init__(self, scheduler, marathon, name=None, nprocs=1,
-                 nthreads=0, docker='daskos/distributed', **kwargs):
+                 nthreads=0, docker='daskos/daskathon', **kwargs):
         self.scheduler = scheduler
         self.executor = ThreadPoolExecutor(1)
         self.client = MarathonClient(marathon)
@@ -55,7 +54,7 @@ class MarathonWorkers(object):
         #             'intervalSeconds': 60,
         #             'timeoutSeconds': 20,
         #             'maxConsecutiveFailures': 3}
-        #            for i, name in enumerate(['worker', 'nanny', 'http', 'bokeh'])]
+        # for i, name in enumerate(['worker', 'nanny', 'http', 'bokeh'])]
         healths = []
 
         if 'mem' in self.options:
@@ -91,7 +90,7 @@ class MarathonWorkers(object):
 
 class MarathonCluster(object):
 
-    def __init__(self, loop=None, nworkers=0, 
+    def __init__(self, loop=None, nworkers=0,
                  scheduler_port=8786, diagnostics_port=8787,
                  services={}, adaptive=False, silence_logs=logging.CRITICAL,
                  **kwargs):
@@ -114,19 +113,17 @@ class MarathonCluster(object):
             try:
                 from distributed.bokeh.scheduler import BokehScheduler
             except ImportError:
-                logger.info('To start diagnostics web server '
-                            'please install Bokeh')
-                return
+                logger.info('To start diagnostics server please install Bokeh')
             else:
                 services[('bokeh', diagnostics_port)] = BokehScheduler
 
         self.scheduler = Scheduler(loop=self.loop, services=services)
-        self.workers = MarathonWorkers(self.scheduler, **kwargs)
+        self.scheduler_port = scheduler_port
 
+        self.workers = MarathonWorkers(self.scheduler, **kwargs)
         if adaptive:
             self.adaptive = Adaptive(self.scheduler, self.workers)
 
-        self.scheduler_port = scheduler_port
         self.scheduler.start(scheduler_port)
         self.workers.start(nworkers)
         self.status = 'running'
@@ -148,6 +145,9 @@ class MarathonCluster(object):
 
     @gen.coroutine
     def _close(self):
+        if self.status == 'closed':
+            return
+
         logging.info('Stopping workers...')
         self.workers.close()
 
@@ -155,17 +155,20 @@ class MarathonCluster(object):
             logging.info('Stopping scheduler...')
             yield self.scheduler.close(fast=True)
 
+        self.status = 'closed'
+
     def close(self):
         """ Close the cluster """
-        if self.status == 'running':
-            self.status = 'closed'
-            if self.loop._running:
-                sync(self.loop, self._close)
-            if hasattr(self, '_thread'):
-                sync(self.loop, self.loop.stop)
-                self._thread.join(timeout=1)
-                self.loop.close()
-                del self._thread
+        if self.status == 'closed':
+            return
+
+        if self.loop._running:
+            sync(self.loop, self._close)
+        if hasattr(self, '_thread'):
+            sync(self.loop, self.loop.stop)
+            self._thread.join(timeout=1)
+            self.loop.close()
+            del self._thread
 
     def __enter__(self):
         return self
@@ -175,4 +178,7 @@ class MarathonCluster(object):
 
     @property
     def scheduler_address(self):
-        return self.scheduler.address
+        try:
+            return self.scheduler.address
+        except ValueError:
+            return '<unstarted>'

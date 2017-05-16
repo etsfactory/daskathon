@@ -1,17 +1,15 @@
-version: "2"
+version: "3"
 
 services:
-  zookeeper:
+  zk:
     network_mode: host
-    image: zookeeper:3.4.9
+    image: zookeeper:3.4
 
   mesos-master:
-    image: mesosphere/mesos-master:1.2.0
     network_mode: host
+    image: mesosphere/mesos-master:1.2.0
     entrypoint:
       - mesos-master
-    depends_on:
-      - zookeeper
     environment:
       - MESOS_IP=127.0.0.1
       - MESOS_CLUSTER=local
@@ -19,22 +17,18 @@ services:
       - MESOS_QUORUM=1
       - MESOS_PORT=5050
       - MESOS_WORK_DIR=/var/lib/mesos
-      - MESOS_ZK=zk://127.0.0.1:2181/mesos
+      - MESOS_ZK=zk://localhost:2181/mesos
 
   mesos-slave:
+    network_mode: host
     image: mesosphere/mesos-slave:1.2.0
     entrypoint:
       - mesos-slave
-    network_mode: host
-    depends_on:
-      - zookeeper
-      - mesos-master
     environment:
-      - MESOS_IP=127.0.0.1
       - MESOS_CONTAINERIZERS=mesos,docker
       - MESOS_ISOLATOR=cgroups/cpu,cgroups/mem
       - MESOS_ISOLATION=cgroups/cpu,cgroups/mem,docker/runtime
-      - MESOS_MASTER=zk://127.0.0.1:2181/mesos
+      - MESOS_MASTER=zk://localhost:2181/mesos
       - MESOS_PORT=5051
       - MESOS_WORK_DIR=/var/lib/mesos
       - MESOS_RESOURCES=ports(*):[11000-11999]
@@ -45,11 +39,9 @@ services:
     privileged: true
 
   marathon:
-    image:  mesosphere/marathon:latest
     network_mode: host
-    depends_on:
-      - zookeeper
-      - mesos-master
+    image: mesosphere/marathon:latest
     environment:
-      - MARATHON_ZK=zk://127.0.0.1:2181/marathon
-      - MARATHON_MASTER=zk://127.0.0.1:2181/mesos
+      - MARATHON_ZK=zk://localhost:2181/marathon
+      - MARATHON_MASTER=zk://localhost:2181/mesos
+
