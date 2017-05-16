@@ -102,7 +102,7 @@ class MarathonCluster(object):
                       'distributed.nanny']:
                 logging.getLogger(l).setLevel(silence_logs)
 
-        self.loop = loop or IOLoop()
+        self.loop = loop or IOLoop.current()
         if not self.loop._running:
             self._thread = Thread(target=self.loop.start)
             self._thread.daemon = True
