@@ -108,18 +108,20 @@ def run(marathon, name, worker_cpus, worker_mem, ip, port, bokeh_port,
               help='Adaptive deployment of workers')
 @click.option('--constraint', '-c', type=str, multiple=True,
               help='Marathon constraint in form `field:operator:value`')
+@click.option('--label', '-l', type=str, multiple=True,
+              help='Marathon label in form `key:value`')
 @click.option('--uri', type=str, multiple=True,
               help='Mesos uri')
 @click.option('--jupyter', '-j', is_flag=True,
               help='Start a jupyter notebook client on the cluster')
 def deploy(marathon, name, docker, scheduler_cpus, scheduler_mem, adaptive,
-           port, bokeh_port, constraint, uri, jupyter, **kwargs):
+           port, bokeh_port, constraint, label, uri, jupyter, **kwargs):
     name = name or 'daskathon-{}'.format(str(uuid.uuid4())[-4:])
 
     kwargs['name'] = '{}-workers'.format(name)
     kwargs['docker'] = docker
-    kwargs['port'] = '$PORT_SCHEDULER'
-    kwargs['bokeh_port'] = '$PORT_BOKEH'
+    kwargs['port'] = port
+    kwargs['bokeh_port'] = bokeh_port
 
     args = [('--{}'.format(k.replace('_', '-')), str(v))
             for k, v in kwargs.items() if v not in (None, '')]
@@ -139,18 +141,15 @@ def deploy(marathon, name, docker, scheduler_cpus, scheduler_mem, adaptive,
     args = ['daskathon', 'run'] + args + [marathon]
     cmd = ' '.join(args)
 
-    # healths = [{'portIndex': i,
-    #             'protocol': 'TCP',
-    #             'gracePeriodSeconds': 300,
-    #             'intervalSeconds': 30,
-    #             'timeoutSeconds': 20,
-    #             'maxConsecutiveFailures': 3}
-    #            for i, name in enumerate(['scheduler', 'bokeh', 'http'])]
-    healths = []
-    ports = [{'port': 0, 'protocol': 'tcp', 'name': service}
-             for service in ['scheduler', 'bokeh', 'http']]
+    healths = [{'portIndex': i, 'protocol': 'TCP'}
+               for i, _ in enumerate(['scheduler', 'bokeh'])]
+
+    services = [('scheduler', port), ('bokeh', bokeh_port)]
+    ports = [{'port': p, 'protocol': 'tcp', 'name': service}
+             for (service, p) in services]
 
     constraints = [c.split(':')[:3] for c in constraint]
+    labels = dict([l.split(':') for l in label])
 
     scheduler = MarathonApp(instances=1, container=container,
                             cpus=scheduler_cpus, mem=scheduler_mem,
@@ -158,7 +157,9 @@ def deploy(marathon, name, docker, scheduler_cpus, scheduler_mem, adaptive,
                             port_definitions=ports,
                             health_checks=healths,
                             constraints=constraints,
+                            labels=labels,
                             uris=uri,
+                            require_ports=True,
                             cmd=cmd)
     client.create_app('{}-scheduler'.format(name), scheduler)
 
