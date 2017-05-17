@@ -102,7 +102,7 @@ class MarathonCluster(object):
                       'distributed.nanny']:
                 logging.getLogger(l).setLevel(silence_logs)
 
-        self.loop = loop or IOLoop.current()
+        self.loop = loop or IOLoop()
         if not self.loop._running:
             self._thread = Thread(target=self.loop.start)
             self._thread.daemon = True
@@ -118,6 +118,7 @@ class MarathonCluster(object):
             else:
                 services[('bokeh', diagnostics_port)] = BokehScheduler
 
+        services = {}
         self.scheduler = Scheduler(loop=self.loop, services=services)
         self.workers = MarathonWorkers(self.scheduler, **kwargs)
         if adaptive:
