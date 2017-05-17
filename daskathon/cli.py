@@ -32,9 +32,9 @@ def daskathon():
               help='Cpus allocated for each worker')
 @click.option('--worker-mem', type=int, default=512,
               help='Memory of workers instances in MiB')
-@click.option('--ip', type=str, default='',
+@click.option('--ip', type=str, default=None,
               help='IP, hostname or URI of this server')
-@click.option('--port', type=int, default=None, help='Serving port')
+@click.option('--port', type=int, default=0, help='Serving port')
 @click.option('--bokeh-port', type=int, default=8787, help='Bokeh port')
 @click.option('--nworkers', type=int, default=0,
               help='Number of worker instances')
@@ -92,9 +92,9 @@ def run(marathon, name, worker_cpus, worker_mem, ip, port, bokeh_port,
               help='Cpus allocated for each worker')
 @click.option('--scheduler-mem', type=int, default=512,
               help='Memory of workers instances in MiB')
-@click.option('--ip', type=str, default='',
+@click.option('--ip', type=str, default=None,
               help='IP, hostname or URI of this server')
-@click.option('--port', type=int, default=None, help='Serving port')
+@click.option('--port', type=int, default=0, help='Serving port')
 @click.option('--bokeh-port', type=int, default=8787, help='Bokeh port')
 @click.option('--nworkers', type=int, default=0,
               help='Number of worker instances')
