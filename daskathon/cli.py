@@ -64,7 +64,7 @@ def run(marathon, name, worker_cpus, worker_mem, ip, port, bokeh_port,
                          nworkers=nworkers, nprocs=nprocs, nthreads=nthreads,
                          marathon=marathon, docker=docker, adaptive=adaptive,
                          name=name, cpus=worker_cpus, mem=worker_mem,
-                         constraints=constraints, uris=uri,
+                         constraints=constraints, uris=uri, ip=ip,
                          silence_logs=logging.INFO)
 
     def handle_signal(sig, frame):
