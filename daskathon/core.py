@@ -22,13 +22,14 @@ logger.setLevel(logging.INFO)
 
 class MarathonWorkers(object):
 
-    def __init__(self, scheduler, marathon, name=None, nprocs=1,
-                 nthreads=0, docker='daskos/daskathon', **kwargs):
+    def __init__(self, scheduler, marathon, name=None, nprocs=1, nthreads=0,
+                 docker='daskos/daskathon', volumes=[], **kwargs):
         self.scheduler = scheduler
         self.executor = ThreadPoolExecutor(1)
         self.client = MarathonClient(marathon)
         self.name = name or 'dask-%s' % uuid.uuid4()
         self.docker = docker
+        self.volumes = volumes
         self.nprocs = nprocs
         self.nthreads = nthreads
         self.options = kwargs
@@ -62,8 +63,11 @@ class MarathonWorkers(object):
             args.extend(['--memory-limit',
                          str(int(self.options['mem'] * 0.8 * 1e6))])
 
+        docker_parameters = [{"key": "volume", "value": v}
+                             for v in self.volumes]
         container = MarathonContainer({'image': self.docker,
-                                       'forcePullImage': True})
+                                       'forcePullImage': True,
+                                       'parameters': docker_parameters})
         command = ' '.join(args)
 
         app = MarathonApp(instances=nworkers, container=container,

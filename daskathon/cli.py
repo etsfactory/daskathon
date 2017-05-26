@@ -44,6 +44,9 @@ def daskathon():
               help='Number of threads inside a process')
 @click.option('--docker', type=str, default='daskos/daskathon',
               help="Worker's docker image")
+@click.option('--volume', type=str, multiple=True,
+              help="Shared volume from host machine in form "
+              "host_path:container_path")
 @click.option('--adaptive', is_flag=True,
               help='Adaptive deployment of workers')
 @click.option('--constraint', '-c', type=str, default='', multiple=True,
@@ -51,7 +54,7 @@ def daskathon():
 @click.option('--uri', type=str, multiple=True,
               help='Mesos uri')
 def run(marathon, name, worker_cpus, worker_mem, ip, port, bokeh_port,
-        nworkers, nprocs, nthreads, docker, adaptive, constraint, uri):
+        nworkers, nprocs, nthreads, docker, volume, adaptive, constraint, uri):
     if sys.platform.startswith('linux'):
         import resource   # module fails importing on Windows
         soft, hard = resource.getrlimit(resource.RLIMIT_NOFILE)
@@ -62,10 +65,10 @@ def run(marathon, name, worker_cpus, worker_mem, ip, port, bokeh_port,
 
     mc = MarathonCluster(diagnostics_port=bokeh_port, scheduler_port=port,
                          nworkers=nworkers, nprocs=nprocs, nthreads=nthreads,
-                         marathon=marathon, docker=docker, adaptive=adaptive,
-                         name=name, cpus=worker_cpus, mem=worker_mem,
-                         constraints=constraints, uris=uri, ip=ip,
-                         silence_logs=logging.INFO)
+                         marathon=marathon, docker=docker, volumes=volume,
+                         adaptive=adaptive, name=name, cpus=worker_cpus,
+                         mem=worker_mem, constraints=constraints, uris=uri,
+                         ip=ip, silence_logs=logging.INFO)
 
     def handle_signal(sig, frame):
         logger.info('Received signal, shutdown...')
@@ -104,6 +107,9 @@ def run(marathon, name, worker_cpus, worker_mem, ip, port, bokeh_port,
               help='Number of threads inside a process')
 @click.option('--docker', type=str, default='daskos/daskathon',
               help="Worker's docker image")
+@click.option('--volume', type=str, multiple=True,
+              help="Shared volume from host machine in form "
+              "host_path:container_path")
 @click.option('--adaptive', '-a', is_flag=True,
               help='Adaptive deployment of workers')
 @click.option('--constraint', '-c', type=str, multiple=True,
@@ -114,8 +120,9 @@ def run(marathon, name, worker_cpus, worker_mem, ip, port, bokeh_port,
               help='Mesos uri')
 @click.option('--jupyter', '-j', is_flag=True,
               help='Start a jupyter notebook client on the cluster')
-def deploy(marathon, name, docker, scheduler_cpus, scheduler_mem, adaptive,
-           port, bokeh_port, constraint, label, uri, jupyter, **kwargs):
+def deploy(marathon, name, docker, volume, scheduler_cpus, scheduler_mem,
+           adaptive, port, bokeh_port, constraint, label, uri, jupyter,
+           **kwargs):
     name = name or 'daskathon-{}'.format(str(uuid.uuid4())[-4:])
 
     kwargs['name'] = '{}-workers'.format(name)
@@ -130,14 +137,18 @@ def deploy(marathon, name, docker, scheduler_cpus, scheduler_mem, adaptive,
         args.append(('--constraint', c))
     for u in uri:
         args.append(('--uri', u))
+    for v in volume:
+        args.append(('--volume', v))
 
     args = list(concat(args))
     if adaptive:
         args.append('--adaptive')
 
     client = MarathonClient(marathon)
+    docker_parameters = [{"key": "volume", "value": v} for v in volume]
     container = MarathonContainer({'image': docker,
-                                   'forcePullImage': True})
+                                   'forcePullImage': True,
+                                   'parameters': docker_parameters})
     args = ['daskathon', 'run'] + args + [marathon]
     cmd = ' '.join(args)
 
