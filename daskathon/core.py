@@ -82,9 +82,9 @@ class MarathonWorkers(object):
         self.client.delete_app(self.app.id, force=True)
         del self.app
 
-    def scale_up(self, nworkers):
+    def scale_up(self, n):
         self.executor.submit(self.client.scale_app, self.app.id,
-                             instances=nworkers)
+                             instances=n)
 
     def scale_down(self, workers):
         for worker in workers:
