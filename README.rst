@@ -1,10 +1,14 @@
 Daskathon
 =========
 
-|Build Status|
+|Build Status| |Gitential|
 
 .. |Build Status| image:: https://travis-ci.org/daskos/daskathon.svg
    :target: https://travis-ci.org/daskos/daskathon
+
+.. |Gitential| image:: https://api.gitential.com/accounts/6/projects/116/badges/coding-hours.svg
+   :alt: Gitential Coding Hours
+   :target: https://gitential.com/accounts/6/projects/116/share?uuid=8e3a1985-db2f-4923-885b-8555047f63be&utm_source=shield&utm_medium=shield&utm_campaign=116
 
 Deploy ``dask-worker`` processes on Marathon in response to load on a Dask
 scheduler.  This creates a Marathon application of dask-worker processes.  It
