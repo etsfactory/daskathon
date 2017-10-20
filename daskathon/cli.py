@@ -28,7 +28,7 @@ def daskathon():
 @click.argument('marathon', type=str)
 @click.option('--name', type=str, default='daskathon-workers',
               help='Application name')
-@click.option('--worker-cpus', type=int, default=1,
+@click.option('--worker-cpus', type=float, default=1.0,
               help='Cpus allocated for each worker')
 @click.option('--worker-mem', type=int, default=512,
               help='Memory of workers instances in MiB')
@@ -51,10 +51,15 @@ def daskathon():
               help='Adaptive deployment of workers')
 @click.option('--constraint', '-c', type=str, default='', multiple=True,
               help='Marathon constrain in form `field:operator:value`')
+@click.option('--maximum-over-capacity', type=float, default=None,
+              help='maximum percent of instances kept healthy on deploy')
+@click.option('--minimum-health-capacity', type=float, default=None,
+              help='minimum percent of instances kept healthy on deploy')
 @click.option('--uri', type=str, multiple=True,
               help='Mesos uri')
 def run(marathon, name, worker_cpus, worker_mem, ip, port, bokeh_port,
-        nworkers, nprocs, nthreads, docker, volume, adaptive, constraint, uri):
+        nworkers, nprocs, nthreads, docker, volume, adaptive, constraint,
+        maximum_over_capacity, minimum_health_capacity, uri):
     if sys.platform.startswith('linux'):
         import resource   # module fails importing on Windows
         soft, hard = resource.getrlimit(resource.RLIMIT_NOFILE)
@@ -63,11 +68,15 @@ def run(marathon, name, worker_cpus, worker_mem, ip, port, bokeh_port,
 
     constraints = [c.split(':')[:3] for c in constraint]
 
+    upgrade_strategy = {'maximum_over_capacity': maximum_over_capacity,
+                        'minimum_health_capacity': minimum_health_capacity}
+
     mc = MarathonCluster(diagnostics_port=bokeh_port, scheduler_port=port,
                          nworkers=nworkers, nprocs=nprocs, nthreads=nthreads,
                          marathon=marathon, docker=docker, volumes=volume,
                          adaptive=adaptive, name=name, cpus=worker_cpus,
                          mem=worker_mem, constraints=constraints, uris=uri,
+                         upgrade_strategy=upgrade_strategy,
                          ip=ip, silence_logs=logging.INFO)
 
     def handle_signal(sig, frame):
@@ -87,11 +96,11 @@ def run(marathon, name, worker_cpus, worker_mem, ip, port, bokeh_port,
 @click.argument('marathon', type=str)
 @click.option('--name', '-n', type=str, default='',
               help='Application name')
-@click.option('--worker-cpus', type=int, default=1,
+@click.option('--worker-cpus', type=float, default=1.0,
               help='Cpus allocated for each worker')
 @click.option('--worker-mem', type=int, default=512,
               help='Memory of workers instances in MiB')
-@click.option('--scheduler-cpus', type=int, default=1,
+@click.option('--scheduler-cpus', type=float, default=1.0,
               help='Cpus allocated for each worker')
 @click.option('--scheduler-mem', type=int, default=512,
               help='Memory of workers instances in MiB')
@@ -114,6 +123,10 @@ def run(marathon, name, worker_cpus, worker_mem, ip, port, bokeh_port,
               help='Adaptive deployment of workers')
 @click.option('--constraint', '-c', type=str, multiple=True,
               help='Marathon constraint in form `field:operator:value`')
+@click.option('--maximum-over-capacity', type=float, default=None,
+              help='maximum percent of instances kept healthy on deploy')
+@click.option('--minimum-health-capacity', type=float, default=None,
+              help='minimum percent of instances kept healthy on deploy')
 @click.option('--label', '-l', type=str, multiple=True,
               help='Marathon label in form `key:value`')
 @click.option('--uri', type=str, multiple=True,
@@ -121,7 +134,8 @@ def run(marathon, name, worker_cpus, worker_mem, ip, port, bokeh_port,
 @click.option('--jupyter', '-j', is_flag=True,
               help='Start a jupyter notebook client on the cluster')
 def deploy(marathon, name, docker, volume, scheduler_cpus, scheduler_mem,
-           adaptive, port, bokeh_port, constraint, label, uri, jupyter,
+           adaptive, port, bokeh_port, constraint,
+           maximum_over_capacity, minimum_health_capacity, label, uri, jupyter,
            **kwargs):
     name = name or 'daskathon-{}'.format(str(uuid.uuid4())[-4:])
 
@@ -139,6 +153,14 @@ def deploy(marathon, name, docker, volume, scheduler_cpus, scheduler_mem,
         args.append(('--uri', u))
     for v in volume:
         args.append(('--volume', v))
+
+    if maximum_over_capacity:
+        args.append(('--maximum-over-capacity',
+                     str(maximum_over_capacity)))
+
+    if minimum_health_capacity:
+        args.append(('--minimum-health-capacity',
+                     str(minimum_health_capacity)))
 
     args = list(concat(args))
     if adaptive:
@@ -161,6 +183,8 @@ def deploy(marathon, name, docker, volume, scheduler_cpus, scheduler_mem,
 
     constraints = [c.split(':')[:3] for c in constraint]
     labels = dict([l.split(':') for l in label])
+    upgrade_strategy = {'maximum_over_capacity': maximum_over_capacity,
+                        'minimum_health_capacity': minimum_health_capacity}
 
     scheduler = MarathonApp(instances=1, container=container,
                             cpus=scheduler_cpus, mem=scheduler_mem,
@@ -168,11 +192,12 @@ def deploy(marathon, name, docker, volume, scheduler_cpus, scheduler_mem,
                             port_definitions=ports,
                             health_checks=healths,
                             constraints=constraints,
+                            upgrade_strategy=upgrade_strategy,
                             labels=labels,
                             uris=uri,
                             require_ports=True,
                             cmd=cmd)
-    client.create_app('{}-scheduler'.format(name), scheduler)
+    client.update_app('{}-scheduler'.format(name), scheduler)
 
     if jupyter:
         cmd = ('jupyter notebook --allow-root --no-browser '
@@ -181,4 +206,4 @@ def deploy(marathon, name, docker, volume, scheduler_cpus, scheduler_mem,
         jupyter = deepcopy(scheduler)
         jupyter.cmd = cmd
         jupyter.port_definitions = ports
-        client.create_app('{}-jupyter'.format(name), jupyter)
+        client.update_app('{}-jupyter'.format(name), jupyter)
