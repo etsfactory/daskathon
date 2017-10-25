@@ -1,0 +1,2 @@
+include versioneer.py
+include daskathon/_version.py

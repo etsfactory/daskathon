@@ -1,10 +1,12 @@
 #!/usr/bin/env python
 
+import versioneer
 from os.path import exists
 from setuptools import setup
 
 setup(name='daskathon',
-      version='1.2.0',
+      version=versioneer.get_version(),
+      cmdclass=versioneer.get_cmdclass(),
       description='Deploy Dask on Marathon',
       url='http://github.com/daskos/daskathon/',
       maintainer='Krisztian Szucs',
