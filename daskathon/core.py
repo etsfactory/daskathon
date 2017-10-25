@@ -74,21 +74,20 @@ class MarathonWorkers(object):
                           port_definitions=ports, cmd=command,
                           health_checks=healths,
                           **self.options)
-        self.app = self.client.create_app(self.name, app)
-        logger.info('Started marathon workers {}'.format(self.app.id))
+        self.client.update_app(self.name, app)
+        logger.info('Started marathon workers {}'.format(self.name))
 
     def close(self):
-        logger.info('Stopping marathon workers {}'.format(self.app.id))
-        self.client.delete_app(self.app.id, force=True)
-        del self.app
+        logger.info('Stopping marathon workers {}'.format(self.name))
+        self.client.delete_app(self.name, force=True)
 
     def scale_up(self, n):
-        self.executor.submit(self.client.scale_app, self.app.id,
+        self.executor.submit(self.client.scale_app, self.name,
                              instances=n)
 
     def scale_down(self, workers):
         for worker in workers:
-            self.executor.submit(self.client.kill_task, self.app.id,
+            self.executor.submit(self.client.kill_task, self.name,
                                  self.scheduler.worker_info[worker]['name'],
                                  scale=True)
 
