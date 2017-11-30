@@ -41,7 +41,6 @@ class MarathonWorkers(object):
                 '--worker-port', '$PORT_WORKER',
                 '--bokeh-port', '$PORT_BOKEH',
                 '--nanny-port', '$PORT_NANNY',
-                '--http-port', '$PORT_HTTP',
                 '--nprocs', str(self.nprocs),
                 '--nthreads', str(self.nthreads)]
 
