@@ -4,6 +4,7 @@ import logging
 import uuid
 
 from time import sleep
+from requests import Session
 from tornado import gen
 from tornado.ioloop import IOLoop
 from threading import Thread
@@ -26,7 +27,9 @@ class MarathonWorkers(object):
                  docker='daskos/daskathon', volumes=[], **kwargs):
         self.scheduler = scheduler
         self.executor = ThreadPoolExecutor(1)
-        self.client = MarathonClient(marathon)
+        # PATCH: This fix a bug in Windows 7:
+        # https://github.com/thefactory/marathon-python/issues/234
+        self.client = MarathonClient(marathon, sse_session=Session())
         self.name = name or 'dask-%s' % uuid.uuid4()
         self.docker = docker
         self.volumes = volumes
